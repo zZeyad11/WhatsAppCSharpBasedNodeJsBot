@@ -31,7 +31,9 @@ server.on('message', async function(msg, info) {
         if (fs.existsSync(SESSION_FILE_PATH)) {
             sessionData = require(SESSION_FILE_PATH);
         }
-        WClient = new Client({ takeoverOnConflict: true });
+        WClient = new Client({
+            takeoverOnConflict: true
+        });
 
 
         SetWhatsAppClient(info);

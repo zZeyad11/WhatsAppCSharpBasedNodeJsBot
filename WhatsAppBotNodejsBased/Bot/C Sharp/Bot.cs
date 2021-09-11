@@ -11,6 +11,7 @@ using System.Threading;
 
 namespace WhatsAppBotNodejsBased.Bot
 {
+
     public class Bot
     {
         //Is Whats App Signed In
@@ -52,19 +53,25 @@ namespace WhatsAppBotNodejsBased.Bot
 
         public Bot(int Port = 20567)
         {
+            Start(Port);
+        }
+
+        private async Task Start(int Port)
+        {
             this.Port = Port;
             StartBotInBackGround(Port);
             udpSocket = new UDPConnection.UdpSocketClient();
-            udpSocket.ConnectAsync("localhost", Port);
+            await udpSocket.ConnectAsync("localhost", Port);
             udpSocket.MessageReceived += GotResponse;
             _Preview = new QR_Preview();
             IsSignedIn = false;
         }
 
 
-        public string GET_ID(string PhoneNumberWithCountryCodeWithoutThePlusSign,ChatType type) //Only For Chat not Group
+
+        public string GET_ID(string PhoneNumberWithCountryCodeWithoutThePlusSign, ChatType type) //Only For Chat not Group
         {
-            if(type == ChatType.Chat)
+            if (type == ChatType.Chat)
             {
                 return PhoneNumberWithCountryCodeWithoutThePlusSign + "@c.us";
             }
@@ -84,8 +91,11 @@ namespace WhatsAppBotNodejsBased.Bot
             }
         }
 
-        public void Close()
+        public async void Close()
         {
+            udpSocket.MessageReceived -= GotResponse;
+            await udpSocket.DisconnectAsync();
+            
             foreach (var node in System.Diagnostics.Process.GetProcessesByName("node"))
             {
                 node.Kill();
@@ -99,16 +109,33 @@ namespace WhatsAppBotNodejsBased.Bot
 
             if (Message.StartsWith("qr"))
             {
-                Thread t = new Thread(() =>
+                (new Thread(() =>
                 {
-                    if (_Preview.IShown) _Preview.Close();
-                    _Preview = new QR_Preview();
-                    var QR_Code = Message.Replace("qr:", ""); //Get QR Code
-                    _Preview.ShowQR(QR_Code); // Display QR Code
-                    _Preview.ShowDialog();
-                });
+                    if (_Preview.InvokeRequired)
+                    {
+                        _Preview.Invoke(new Action(() => {
+                            if (_Preview.IShown) _Preview.Close();
+                            _Preview = new QR_Preview();
+                            var QR_Code = Message.Replace("qr:", ""); //Get QR Code
+                            _Preview.ShowQR(QR_Code); // Display QR Code
+                            _Preview.ShowDialog();
 
-                t.Start();
+                        }));
+
+                    }
+                    else
+                    {
+                        if (_Preview.IShown) _Preview.Close();
+                        _Preview = new QR_Preview();
+                        var QR_Code = Message.Replace("qr:", ""); //Get QR Code
+                        _Preview.ShowQR(QR_Code); // Display QR Code
+                        _Preview.ShowDialog();
+                    }
+
+
+                })).Start();
+
+            
 
             }
 
@@ -116,17 +143,25 @@ namespace WhatsAppBotNodejsBased.Bot
             {
                 try
                 {
-                    _Preview.Invoke(new Action(() =>
+                    if (_Preview.InvokeRequired)
+                    {
+                        _Preview.Invoke(new Action(() =>
+                        {
+                            _Preview.Close(); // End Display QR Code
+                        }));
+                    }
+                    else
                     {
                         _Preview.Close(); // End Display QR Code
-                }));
+                    }
                 }
                 catch { }
 
                 GetStautsInBackground(); //Start Getting Whatapp Stauts
                 GetPic(); //Get Profile Pic
 
-                WhatsUpLoggedInEvent?.Invoke(this, new WhatsUpLoggedIn());
+                
+                WhatsUpLoggedInEvent?.Raise(this, new WhatsUpLoggedIn());
 
 
             }
@@ -137,7 +172,7 @@ namespace WhatsAppBotNodejsBased.Bot
                 //Raise Event If Stauts Changed
                 if ((Stauts == "CONNECTED") == !IsSignedIn)
                 {
-                    BotStautsChangedEvent?.Invoke(this, new BotStautsChanged((Stauts == "CONNECTED")));
+                    BotStautsChangedEvent?.Raise(this, new BotStautsChanged((Stauts == "CONNECTED")));
                 }
 
                 //Set New Stauts
@@ -159,7 +194,7 @@ namespace WhatsAppBotNodejsBased.Bot
 
 
                 //Got Profile Pic & Raise Event
-                GotProfilePicEvent?.Invoke(this, new GotProfilePic(ProfilePic));
+                GotProfilePicEvent?.Raise(this, new GotProfilePic(ProfilePic));
             }
 
             else if (Message.StartsWith("message:"))
@@ -169,7 +204,7 @@ namespace WhatsAppBotNodejsBased.Bot
 
 
                 //Got New Message & Raise Event
-                GotNewMessageEvent?.Invoke(this, new GotNewMessage(message));
+                GotNewMessageEvent?.Raise(this, new GotNewMessage(message));
             }
             else if (Message.StartsWith("chats:"))
             {
@@ -177,7 +212,7 @@ namespace WhatsAppBotNodejsBased.Bot
                 List<Chat> Chats = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Chat>>(Messages);
 
                 //Got Chats & Raise Event
-                GotChatsListEvent?.Invoke(this, new GotChatsList(Chats));
+                GotChatsListEvent?.Raise(this, new GotChatsList(Chats));
             }
             else if (Message.StartsWith("groups:"))
             {
@@ -186,7 +221,7 @@ namespace WhatsAppBotNodejsBased.Bot
 
 
                 //Got Groups & Raise Event
-                GotGroupsListEvent?.Invoke(this, new GotGroupsList(Groups));
+                GotGroupsListEvent?.Raise(this, new GotGroupsList(Groups));
             }
             else if (Message.StartsWith("contacts:"))
             {
@@ -194,7 +229,7 @@ namespace WhatsAppBotNodejsBased.Bot
                 List<Contact> Contacts = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Contact>>(Messages);
 
                 //Got Contacts & Raise Event
-                GotContactsListEvent?.Invoke(this, new GotContactsList(Contacts));
+                GotContactsListEvent?.Raise(this, new GotContactsList(Contacts));
 
             }
             else if (Message.StartsWith("UnReadedMessages:"))
@@ -203,7 +238,7 @@ namespace WhatsAppBotNodejsBased.Bot
                 List<Message> UnreadMessages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Message>>(Messages);
 
                 //Got Unreaded Messages & Raise Event
-                GotUnReadedMessagesListEvent?.Invoke(this, new GotUnReadedMessagesList(UnreadMessages));
+                GotUnReadedMessagesListEvent?.Raise(this, new GotUnReadedMessagesList(UnreadMessages));
             }
 
         }

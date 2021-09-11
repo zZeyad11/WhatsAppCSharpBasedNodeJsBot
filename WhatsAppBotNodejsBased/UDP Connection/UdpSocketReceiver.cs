@@ -11,14 +11,14 @@ using PclSocketException = UDPConnection.SocketException;
 
 namespace UDPConnection
 {
-   
+
     public class UdpSocketReceiver : UdpSocketBase, IUdpSocketReceiver
     {
 
         public int Port;
         private CancellationTokenSource _messageCanceller;
 
-  
+
         public Task StartListeningAsync(int port = 0, ICommsInterface listenOn = null)
         {
             Port = port;
@@ -41,10 +41,10 @@ namespace UDPConnection
 
                     RunMessageReceiver(_messageCanceller.Token);
                 })
-                .WrapNativeSocketExceptions();
+                ;
         }
 
-      
+
         public Task StopListeningAsync()
         {
             return Task.Run(() =>
@@ -54,18 +54,18 @@ namespace UDPConnection
             });
         }
 
-      
+
         public new Task SendToAsync(byte[] data, string address, int port)
         {
             return SendToAsync(data, data.Length, address, port);
         }
 
-    
+
         public new async Task SendToAsync(byte[] data, int length, string address, int port)
         {
             if (_backingUdpClient == null)
             {
-         
+
                 try
                 {
                     _backingUdpClient = new UdpClient { EnableBroadcast = true };
@@ -90,7 +90,7 @@ namespace UDPConnection
             }
         }
 
-     
+
         public override void Dispose()
         {
             if (_messageCanceller != null && !_messageCanceller.IsCancellationRequested)

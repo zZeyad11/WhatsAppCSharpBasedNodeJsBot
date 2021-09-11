@@ -41,8 +41,7 @@ namespace UDPConnection
             return Task.Run(() => {
                 _backingUdpClient.Connect(address, port);
                 base.RunMessageReceiver(_messageCanceller.Token);
-            })
-            .WrapNativeSocketExceptions();
+            });
         }
 
        

@@ -32,8 +32,7 @@ namespace UDPConnection
                 {
                    
                     msg = await _backingUdpClient
-                        .ReceiveAsync()
-                        .WrapNativeSocketExceptions();
+                        .ReceiveAsync();
                     
                     didReceive = true;
                 }
@@ -62,32 +61,28 @@ namespace UDPConnection
         protected Task SendAsync(byte[] data)
         {
             return _backingUdpClient
-                .SendAsync(data, data.Length)
-                .WrapNativeSocketExceptions();
+                .SendAsync(data, data.Length);
         }
 
        
         protected Task SendAsync(byte[] data, int length)
         {
             return _backingUdpClient
-                .SendAsync(data, length)
-                .WrapNativeSocketExceptions();
+                .SendAsync(data, length);
         }
 
        
         protected Task SendToAsync(byte[] data, string address, int port)
         {
             return _backingUdpClient
-                .SendAsync(data, data.Length, address, port)
-                .WrapNativeSocketExceptions();
+                .SendAsync(data, data.Length, address, port);
         }
 
        
         protected Task SendToAsync(byte[] data, int length, string address, int port)
         {
             return _backingUdpClient
-                .SendAsync(data, length, address, port)
-                .WrapNativeSocketExceptions();
+                .SendAsync(data, length, address, port);
         }
         
         protected void ProtectAgainstICMPUnreachable(UdpClient udpClient)

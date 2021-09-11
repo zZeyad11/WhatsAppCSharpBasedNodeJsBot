@@ -29,8 +29,6 @@ namespace Example
 
         private void Bot_GotNewMessageEvent(Bot sender, GotNewMessage e)
         {
-
-
             var MessageText = e.NewMessage.body; //Text Body
             var MessageFrom = e.NewMessage.GetSenderNumber(); //Sender Phone Number
         }
@@ -81,7 +79,7 @@ namespace Example
 
         private void Bot_GotProfilePicEvent(Bot sender, GotProfilePic e)
         {
-            Invoke(new Action(delegate { pictureBox1.BackgroundImage = e.Pic; }));
+            pictureBox1.BackgroundImage = e.Pic;
 
             // Bot.SendMessage(Bot.GET_ID("201067528903", ChatType.Chat), "Hello from c#", MessageType.Text); //Send Simple Message
             // Bot.SendMessage(Bot.GET_ID("201067528903",ChatType.Chat),"Path To Imamge",MessageType.Image); //Send Image Message
@@ -90,8 +88,6 @@ namespace Example
 
         private void Bot_BotStautsChangedEvent(Bot sender, BotStautsChanged e)
         {
-            Invoke(new Action(delegate
-            {
                 if (e.NewStauts)
                 {
                     Stauts.Text = "Working";
@@ -102,8 +98,6 @@ namespace Example
                     Stauts.Text = "Passive";
                     Stauts.ForeColor = Color.Red;
                 }
-            }));
-
         }
 
         private void button1_Click(object sender, EventArgs e)
