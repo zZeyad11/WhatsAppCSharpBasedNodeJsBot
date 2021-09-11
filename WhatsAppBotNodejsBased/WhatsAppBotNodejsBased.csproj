@@ -67,7 +67,7 @@
     <Compile Include="Bot\C Sharp\Event Handler\GotContactsListEventHandler.cs" />
     <Compile Include="Bot\C Sharp\Event Handler\GotChatsListEventHandler.cs" />
     <Compile Include="Bot\C Sharp\Event Handler\BotStautsChangedEventHandler.cs" />
-    <Compile Include="Bot\C Sharp\EventExtensions.cs" />
+    <Compile Include="Bot\C Sharp\Extensions Methods\EventExtensions.cs" />
     <Compile Include="Bot\C Sharp\Serializable Fields\Chat.cs" />
     <Compile Include="Bot\C Sharp\Enum\ChatType.cs" />
     <Compile Include="Bot\C Sharp\Serializable Fields\Contact.cs" />
