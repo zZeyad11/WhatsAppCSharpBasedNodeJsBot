@@ -8,6 +8,8 @@ using System.IO;
 using System.Net;
 using WhatsAppBotNodejsBased.Bot.C_Sharp.Event_Handler;
 using System.Threading;
+using System.Diagnostics;
+using WhatsAppBotNodejsBased.Bot.C_Sharp.Event_Args;
 
 namespace WhatsAppBotNodejsBased.Bot
 {
@@ -48,6 +50,9 @@ namespace WhatsAppBotNodejsBased.Bot
         public event GotProfilePicEventHandler GotProfilePicEvent;
         public event GotUnReadedMessagesListEventHandler GotUnReadedMessagesListEvent;
         public event WhatsUpLoggedInEventHandler WhatsUpLoggedInEvent;
+        public event GotChatsListFailedEventHandler GotChatsListFailedEvent;
+        public event GotContactsListFailedEventHandler GotContactsListFailedEvent;
+        public event GotGroupsListFailedEventHandler GotGroupsListFailedEvent;
 
 
 
@@ -91,14 +96,16 @@ namespace WhatsAppBotNodejsBased.Bot
             }
         }
 
-        public async void Close()
+        public async Task Close()
         {
             udpSocket.MessageReceived -= GotResponse;
             await udpSocket.DisconnectAsync();
             
             foreach (var node in System.Diagnostics.Process.GetProcessesByName("node"))
             {
-                node.Kill();
+              
+                    node.Kill();
+               
             }
         }
 
@@ -113,7 +120,8 @@ namespace WhatsAppBotNodejsBased.Bot
                 {
                     if (_Preview.InvokeRequired)
                     {
-                        _Preview.Invoke(new Action(() => {
+                        _Preview.Invoke(new Action(() =>
+                        {
                             if (_Preview.IShown) _Preview.Close();
                             _Preview = new QR_Preview();
                             var QR_Code = Message.Replace("qr:", ""); //Get QR Code
@@ -135,7 +143,27 @@ namespace WhatsAppBotNodejsBased.Bot
 
                 })).Start();
 
-            
+
+
+            }
+
+            else if (Message.StartsWith("Err"))
+            {
+                var ErrorType = Message.Replace("Err","");
+
+                switch (ErrorType)
+                {
+                    case "Contacts":
+                        GotContactsListFailedEvent?.Raise(this, new GetContactsFailed());
+                        break; 
+                    case "Groups":
+                        GotGroupsListFailedEvent?.Raise(this, new GetGroupsFailed());
+                        break;
+
+                    case "Chats":
+                        GotChatsListFailedEvent?.Raise(this, new GetChatsFailed());
+                        break;
+                }
 
             }
 
@@ -160,7 +188,7 @@ namespace WhatsAppBotNodejsBased.Bot
                 GetStautsInBackground(); //Start Getting Whatapp Stauts
                 GetPic(); //Get Profile Pic
 
-                
+
                 WhatsUpLoggedInEvent?.Raise(this, new WhatsUpLoggedIn());
 
 
@@ -307,6 +335,7 @@ namespace WhatsAppBotNodejsBased.Bot
         private void StartBotInBackGround(int Port)
         {
             process = new System.Diagnostics.Process();
+            
             System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
             startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
             startInfo.FileName = "cmd.exe";
@@ -315,6 +344,28 @@ namespace WhatsAppBotNodejsBased.Bot
             process.StartInfo = startInfo;
             process.Start();
 
+        }
+
+
+
+        
+
+        public static bool RunNodeInstallation()
+        {
+            try
+            {
+                var sMSIPath = Environment.CurrentDirectory + "\\Bot\\node-v14.17.6-x86.msi";
+                Process process = new Process();
+                process.StartInfo.FileName = "msiexec.exe";
+                process.StartInfo.Arguments = string.Format(" /qn /i \"{0}\" ALLUSERS=1", sMSIPath);
+                process.Start();
+                process.WaitForExit();
+                return true; 
+            }
+            catch
+            {
+                return false; 
+            }
         }
     }
 

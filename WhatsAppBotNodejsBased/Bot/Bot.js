@@ -24,6 +24,8 @@ server.on('message', async function(msg, info) {
 
     //Start New WhatsWeb Instance
     if (msg.toString().includes('startnew')) {
+
+
         var Name = msg.toString().replace("startnew", "");
         SESSION_FILE_PATH = `./${Name}.json`;
 
@@ -89,8 +91,19 @@ server.on('message', async function(msg, info) {
 
 
     } else if (msg.toString().includes('getchats')) {
-        var Chats = JSON.stringify((await WClient.getChats()).filter(ch => ch.isGroup == false));
-        server.send("chats:" + Chats, SenderPort, 'localhost', function(error) {});
+        try {
+            var ChatData = (await WClient.getChats()).filter(ch => ch.isGroup == false);
+
+            var Chops = chunks(ChatData, 25);
+
+            Chops.forEach(chop => {
+                var Chats = JSON.stringify(chop);
+                server.send("chats:" + Chats, SenderPort, 'localhost', function(error) {});
+            });
+
+        } catch {
+            server.send("ErrChats", SenderPort, 'localhost', function(error) {});
+        }
 
     } else if (msg.toString().includes('getUnreadMessages')) {
         var Chats = (await WClient.getChats()).filter(ch => ch.unreadCount > 0); // Get UnreadChats
@@ -107,53 +120,77 @@ server.on('message', async function(msg, info) {
                 UnReadedMessages.push(message);
             });
         }
-        server.send("UnReadedMessages:" + JSON.stringify(UnReadedMessages), SenderPort, 'localhost', function(error) {});
+        var Chops = chunks(UnReadedMessages, 25);
+        Chops.forEach(chop => {
+            server.send("UnReadedMessages:" + JSON.stringify(chop), SenderPort, 'localhost', function(error) {});
+        });
+
 
     } else if (msg.toString().includes('getgroups')) {
+        try {
+            var Chats = (await WClient.getChats()).filter(ch => ch.isGroup == true);
+            var ModifiedChats = [];
+            for (let chatnum = 0; chatnum < Chats.length; chatnum++) {
+                var ILink = null;
+                try {
+                    var Code = await (Chats[chatnum].getInviteCode());
+                    if (Code != null) {
+                        ILink = "https://chat.whatsapp.com/" + Code;
+                    }
+                } catch {}
+                var MemberList = [];
 
-        var Chats = (await WClient.getChats()).filter(ch => ch.isGroup == true);
-        var ModifiedChats = [];
-        for (let chatnum = 0; chatnum < Chats.length; chatnum++) {
-            var ILink = null;
-            try {
-                ILink = "https://chat.whatsapp.com/" + await (Chats[chatnum].getInviteCode());
-            } catch {}
-            var MemberList = [];
+                //Get Each Member of Each Group
+                for (let MemberNum = 0; MemberNum < Chats[chatnum].groupMetadata.participants.length; MemberNum++) {
+                    try {
+                        var Current = Chats[chatnum].groupMetadata.participants[MemberNum];
+                        var Name = await WClient.getContactById(Current.id._serialized);
+                        var Member = {
+                            Name: Name.pushname,
+                            Phone: Current.id.user,
+                            IsAdmin: Current.isAdmin
+                        };
+                        MemberList.push(Member);
+                    } catch {}
+                }
 
-            //Get Each Member of Each Group
-            for (let MemberNum = 0; MemberNum < Chats[chatnum].groupMetadata.participants.length; MemberNum++) {
-                var Current = Chats[chatnum].groupMetadata.participants[MemberNum];
-                var Name = await WClient.getContactById(Current.id._serialized);
-                var Member = {
-                    Name: Name.pushname,
-                    Phone: Current.id.user,
-                    IsAdmin: Current.isAdmin
+                //Create Formated Group Info
+                var GroupChat = {
+                    name: Chats[chatnum].name,
+                    isReadOnly: Chats[chatnum].isReadOnly,
+                    GroupLink: ILink,
+                    Members: MemberList
                 };
-                MemberList.push(Member);
+                ModifiedChats = [];
+                ModifiedChats.push(GroupChat);
+                var Chops = chunks(ModifiedChats, 25);
+                Chops.forEach(chop => {
+                    server.send("groups:" + JSON.stringify(chop), SenderPort, 'localhost', function(error) {});
+                });
             }
 
-            //Create Formated Group Info
-            var GroupChat = {
-                name: Chats[chatnum].name,
-                isReadOnly: Chats[chatnum].isReadOnly,
-                GroupLink: ILink,
-                Members: MemberList
-            };
-            ModifiedChats.push(GroupChat);
 
+        } catch {
+            server.send("ErrGroups", SenderPort, 'localhost', function(error) {});
         }
-
-        server.send("groups:" + JSON.stringify(ModifiedChats), SenderPort, 'localhost', function(error) {});
 
     } else if (msg.toString().includes('getcontacts')) {
 
-        var Contacts = (await WClient.getContacts()).map(a => {
-            return {
-                Name: a.name,
-                PhoneNumber: a.number
-            }
-        });
-        server.send("contacts:" + JSON.stringify(Contacts), SenderPort, 'localhost', function(error) {});
+        try {
+            var Contacts = (await WClient.getContacts()).map(a => {
+                return {
+                    Name: a.name,
+                    PhoneNumber: a.number
+                }
+            });
+            var Chops = chunks(Contacts, 25);
+            Chops.forEach(chop => {
+                server.send("contacts:" + JSON.stringify(chop), SenderPort, 'localhost', function(error) {});
+            });
+
+        } catch {
+            server.send("ErrContacts", SenderPort, 'localhost', function(error) {});
+        }
     }
 });
 
@@ -177,6 +214,15 @@ server.on('listening', function() {
 server.on('close', function() {
     console.log('Socket is closed !');
 });
+
+var chunks = function(array, size) {
+    var results = [];
+    while (array.length) {
+        results.push(array.splice(0, size));
+    }
+    return results;
+};
+
 
 
 server.bind(process.argv[3]); //Start Listeing On 29874
